@@ -3,16 +3,11 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi import File, UploadFile, Request, FastAPI, HTTPException
-import cv2
-import numpy as np
-import base64
-from io import BytesIO
-from PIL import Image
+from typing import Annotated
+from ml import detect, detect_files
+import sys
 
 app = FastAPI()
-
-app.mount("/static", StaticFiles(directory="./app/static"), name="static")
-
 
 templates = Jinja2Templates(directory="./app/static/templates")
 
@@ -22,28 +17,40 @@ async def root(request: Request):
         request=request, name='index.html'
     )
 
-@app.post("/upload")
-async def upload(request: Request, file: UploadFile = File(...)):
+# Принимает чистые байты, теряются метаданные на подобии имени
+@app.post("/upload", deprecated=True)
+async def upload(request: Request, files: Annotated[list[bytes], File(...)]):
     try:                                                   
-        contents = file.file.read()
+        contents = files
     except Exception:
         raise HTTPException(status_code=500, detail='Something went wrong')
-    finally:
-        file.file.close()
 
-    nparr = np.fromstring(contents, np.uint8)
-    img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    result_img = cv2.flip(img_np, 0)                    # ТУТ ПРЕОБРАЗОВВАНИЯ С КАРТИНКАМИ (ТУТ БУДЕТ РАБОТАТЬ ML МОДЕЛЬ)
-    #cv2.imwrite('flipped_' + file.filename, result_img)
-    
-    result_img = cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB)
-    im = Image.fromarray(result_img)
-
-    buffer = BytesIO()
-    im.save(buffer, format='jpeg')
-    encoded_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    context = await detect_files(contents)
         
-    return templates.TemplateResponse(  request=request,
-                                        name="display.html",
-                                        context={   'image_name': file.filename,
-                                                    "myImage": encoded_image})
+    return templates.TemplateResponse(request=request,
+                                        name="index.html",
+                                        context=context)
+
+# Принимает объекты типа UploadFile, это лучше и надежднее чистых байтов. Позволяет сохранять метаданные.
+@app.post("/uploadfiles")
+async def upload(request: Request, files: Annotated[list[UploadFile], File(...)]):
+    files_validation(files)
+    try:                                                   
+        contents = files
+    except Exception:
+        raise HTTPException(status_code=500, detail='Something went wrong')
+
+    context = await detect_files(contents)
+        
+    return templates.TemplateResponse(request=request,
+                                        name="index.html",
+                                        context=context)
+
+# Проверяет, что на вход пришли изображения поддерживаемых фомратов
+def files_validation(files: list[UploadFile]):
+    for file in files:
+        MIME_type, media_type = file.content_type.split('/')
+        if MIME_type != 'image':
+            raise HTTPException(500, detail="Принимаются только изображения!")
+        elif media_type not in ['jpg', 'jpeg', 'png']:
+            raise HTTPException(500, detail="Принимаются только изображения форматов '.jpg', '.jpeg', '.png'!")
