@@ -29,7 +29,7 @@ async def detect(images: List[bytes]):
 
 async def detect_files(images: List[UploadFile]):
     return_images = []
-    model = YOLO("./weights/yolo11n.pt")                                      
+    model = YOLO("./weights/yolo11n-custom.pt")          # Добавить определение устройства                            
     
     for file in images:
         # создание привычного numpy массива изображения
@@ -39,7 +39,7 @@ async def detect_files(images: List[UploadFile]):
 
         # работа с изображением
         #result_img = cv2.flip(img_np, 0)
-        result = model.predict(img_np, classes=[2], verbose=False)[0]  # detect only cars
+        result = model.predict(img_np, verbose=False)[0]  # detect only cars
         boxes = result.boxes.xyxy.detach().cpu().numpy()
         result_img = result.plot()                
     
@@ -51,6 +51,6 @@ async def detect_files(images: List[UploadFile]):
         encoded_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
         return_images.append({'bytes': encoded_image,
-                              'bboxes': f'Bboxes of image {file.filename}: {boxes}'})
+                              'bboxes': f'Bboxes изображения {file.filename}: {boxes}'})
 
     return {'data': return_images}
