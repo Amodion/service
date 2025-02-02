@@ -5,6 +5,7 @@ import base64
 from io import BytesIO
 from PIL import Image
 from fastapi import UploadFile
+from ultralytics import YOLO
 
 async def detect(images: List[bytes]):
     return_images = []                                      
@@ -27,17 +28,20 @@ async def detect(images: List[bytes]):
     return {'data': return_images}
 
 async def detect_files(images: List[UploadFile]):
-    return_images = []                                      
+    return_images = []
+    model = YOLO("./weights/yolo11n.pt")                                      
     
     for file in images:
-        print(file.content_type)
         # создание привычного numpy массива изображения
         img = file.file.read()
         nparr = np.fromstring(img, np.uint8)
         img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
         # работа с изображением
-        result_img = cv2.flip(img_np, 0)                    
+        #result_img = cv2.flip(img_np, 0)
+        result = model.predict(img_np, classes=[2], verbose=False)[0]  # detect only cars
+        boxes = result.boxes.xyxy.detach().cpu().numpy()
+        result_img = result.plot()                
     
         # перевод numpy массива в байты для отображения. Без BitesIO были проблемы с отобажением
         result_img = cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB)
@@ -47,6 +51,6 @@ async def detect_files(images: List[UploadFile]):
         encoded_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
         return_images.append({'bytes': encoded_image,
-                              'bboxes': f'Bboxes of image {file.filename}: [[1, 2, 3], [4, 5, 6]]'})
+                              'bboxes': f'Bboxes of image {file.filename}: {boxes}'})
 
     return {'data': return_images}
