@@ -1,0 +1,9 @@
+services:
+  car_detector:
+    build: .
+    ports:
+     - "8000:80"
+    environment:
+     - APP_IP=${APP_IP}
+     - APP_PORT=${APP_PORT}
+     - APP_DEVICE=${APP_DEVICE}

@@ -5,7 +5,6 @@ import base64
 from io import BytesIO
 from PIL import Image
 from fastapi import UploadFile
-from ultralytics import YOLO
 
 async def detect(images: List[bytes]):
     return_images = []                                      
@@ -27,9 +26,9 @@ async def detect(images: List[bytes]):
 
     return {'data': return_images}
 
-async def detect_files(images: List[UploadFile]):
+async def detect_files(images: List[UploadFile], model):
     return_images = []
-    model = YOLO("./weights/yolo11n-custom.pt")          # Добавить определение устройства                            
+    #model = YOLO("./weights/yolo11n-custom.pt")          # Добавить определение устройства                            
     
     for file in images:
         # создание привычного numpy массива изображения
