@@ -16,8 +16,11 @@ models = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # define device
+    device = os.environ['APP_DEVICE'] if is_available() else 'cpu'
+    #print(f'Passed device: {os.environ['APP_DEVICE']}. Running on {device}')
     # Load the ML model
-    models['yolo11n-custom'] = YOLO('./weights/yolo11n-custom.pt')
+    models['yolo11n-custom'] = YOLO('./weights/yolo11n-custom.pt').to(device)
     yield
     # Clean up the ML model and release the resources
     models.clear()
@@ -69,16 +72,3 @@ def files_validation(files: list[UploadFile]):
             raise HTTPException(500, detail="Принимаются только изображения!")
         elif media_type not in ['jpg', 'jpeg', 'png']:
             raise HTTPException(500, detail="Принимаются только изображения форматов '.jpg', '.jpeg', '.png'!")
-
-
-#     networks:
-#       net:
-#         ipv4_address: 127.0.0.2
-
-# networks:
-#   net:
-#     driver: bridge
-#     ipam:
-#      config:
-#        - subnet: 127.0.0.0/16
-#          gateway: 127.0.0.1

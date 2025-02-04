@@ -2,7 +2,7 @@ services:
   car_detector:
     build: .
     ports:
-     - "8000:80"
+     - "${DOCKER_IP}:${DOCKER_PORT}:${APP_PORT}"
     environment:
      - APP_IP=${APP_IP}
      - APP_PORT=${APP_PORT}

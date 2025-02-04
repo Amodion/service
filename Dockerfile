@@ -16,4 +16,4 @@ COPY ./app /app/app
 COPY ./weights /app/weights
 
 # 
-CMD ["fastapi", "run", "app/app.py", "--host", "0.0.0.0", "--port", "80"]
+CMD ["sh", "-c", "fastapi run app/app.py --host $APP_IP --port $APP_PORT"]
